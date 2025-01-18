@@ -1,0 +1,31 @@
+{
+  "name": "mcp-ts-client",
+  "version": "1.0.0",
+  "description": "Client pour serveur MCP",
+  "license": "MIT",
+  "author": "Thomas DEVIN",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "mcp-ts-toolskit": "build/index.js"
+  },
+  "files": [
+    "build"
+  ],
+  "scripts": {
+    "build": "tsc && shx chmod +x build/*.js",
+    "prepare": "npm run build",
+    "watch": "tsc --watch",
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "child_process": "^1.0.2",
+    "typescript": "^5.3.3",
+    "yaml": "^2.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "shx": "^0.3.4",
+    "tsx": "^4.19.2"
+  }
+}
