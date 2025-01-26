@@ -1,4 +1,3 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { ILogger, MCPStdioClient } from "./MCPStdioClient.js";
 
 /**
@@ -49,28 +48,22 @@ interface ToolMapping {
 }
 
 /**
- * Adaptateur pour intégrer plusieurs clients MCP avec l'API Anthropic
+ * Adaptateur pour intégrer plusieurs clients de serveurs MCP avec l'API Anthropic
  */
 class AnthropicToolAdapter {
   private mcpClients: MCPStdioClient[];
-  private anthropic: Anthropic;
+
   private toolMappings: ToolMapping[] = [];
   private logger?: ILogger;
 
   /**
    * Construit un adaptateur pour interfacer plusieurs clients MCP avec l'API Anthropic
    * @param mcpClients - Array de clients MCP à intégrer
-   * @param anthropicKey - Clé API pour l'authentification Anthropic
    * @param logger - Logger optionnel pour le suivi des opérations
    */
-  constructor(
-    mcpClients: MCPStdioClient[],
-    anthropicKey: string,
-    logger?: ILogger
-  ) {
+  constructor(mcpClients: MCPStdioClient[], logger?: ILogger) {
     this.logger = logger;
     this.mcpClients = mcpClients;
-    this.anthropic = new Anthropic({ apiKey: anthropicKey });
   }
 
   /**
@@ -138,7 +131,7 @@ class AnthropicToolAdapter {
    * @param toolUse Informations sur l'outil à exécuter
    * @returns Résultat formaté pour l'API Anthropic
    */
-  private async handleToolUse(toolUse: any) {
+  async handleToolUse(toolUse: any) {
     const { name, input, id } = toolUse;
     const mapping = this.toolMappings.find((m) => m.uniqueName === name);
 
@@ -192,26 +185,6 @@ class AnthropicToolAdapter {
       }
     }
     return undefined;
-  }
-
-  async chat(
-    userMessage: string
-  ): Promise<Awaited<ReturnType<typeof this.anthropic.messages.create>>> {
-    const tools = await this.getTools();
-
-    const message = await this.anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
-      max_tokens: 1024,
-      tools: tools,
-      messages: [{ role: "user", content: userMessage }],
-    });
-
-    if (message.stop_reason === "tool_use" && message.content[1]) {
-      const toolResult = await this.handleToolUse(message.content[1]);
-      return this.chat(JSON.stringify(toolResult));
-    }
-
-    return message;
   }
 }
 

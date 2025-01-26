@@ -1,6 +1,33 @@
 import AnthropicToolAdapter from './AnthropicToolAdapter.js';
 import { ConsoleLogger, MCPStdioClient } from './MCPStdioClient.js';
+import Anthropic from "@anthropic-ai/sdk";
 import {  stringify } from 'yaml';
+
+
+async function chat(
+    userMessage: string,
+    anthropicKey: string,
+    anthropicToolAdapter: AnthropicToolAdapter
+  ): Promise<Awaited<ReturnType<typeof anthropic.messages.create>>> {
+    const anthropic = new Anthropic({ apiKey: anthropicKey });;
+    
+    const tools = await anthropicToolAdapter.getTools();
+
+    const message = await anthropic.messages.create({
+      model: "claude-3-5-sonnet-20241022",
+      max_tokens: 1024,
+      tools: tools,
+      messages: [{ role: "user", content: userMessage }],
+    });
+
+    if (message.stop_reason === "tool_use" && message.content[1]) {
+      const toolResult = await anthropicToolAdapter.handleToolUse(message.content[1]);
+      return chat(JSON.stringify(toolResult),anthropicKey,anthropicToolAdapter);
+    }
+
+    return message;
+  }
+
 
 // Exemple d'utilisation
 async function main() {
@@ -47,8 +74,12 @@ async function main() {
    
         try {
           
-            const adapter = new AnthropicToolAdapter([client], "");
-            const response = await adapter.chat("Peux tu charger le contenu de la page web 'https://www.trasis.com/en/', et de quoi cela parle ?");
+            const adapter = new AnthropicToolAdapter([client]);
+            const response = await chat(
+                "Peux tu charger le contenu de la page web 'https://www.trasis.com/en/', et de quoi cela parle ?",
+                "",
+                adapter
+            );
             if ('content' in response) {
                 console.log(response.content);
             } else {
