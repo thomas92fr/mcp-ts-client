@@ -1,5 +1,5 @@
 import { spawn } from 'child_process';
-import type { MCPMessage, MCPRequest, MCPResponse, ClientInfo } from './types.js';
+import type { MCPRequest, ClientInfo } from './types.js';
 
 export class MCPStdioClient {
     private process: any;
@@ -13,15 +13,20 @@ export class MCPStdioClient {
         version: '1.0.0'
     };
 
-    constructor(serverPath: string) {
+    constructor(serverPath: string, env?: Record<string, string>) {
         this.messageQueue = new Map();
         
         console.log('Starting MCP server:', serverPath);
+
+        const processEnv = {
+            ...process.env,
+            ...(env || {})
+        };
         
         // Lancer le processus du serveur MCP avec des options supplémentaires
         this.process = spawn('node', [serverPath], {
             stdio: ['pipe', 'pipe', 'pipe'],
-            env: { ...process.env },
+            env: processEnv,
             windowsHide: true
         });
 

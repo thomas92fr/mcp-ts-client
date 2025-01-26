@@ -19,6 +19,7 @@
     "start": "tsx src/index.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.36.2",
     "child_process": "^1.0.2",
     "typescript": "^5.3.3",
     "yaml": "^2.7.0"

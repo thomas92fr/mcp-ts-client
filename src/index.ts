@@ -1,3 +1,4 @@
+import AnthropicToolAdapter from './AnthropicToolAdapter.js';
 import { MCPStdioClient } from './MCPStdioClient.js';
 import {  stringify } from 'yaml';
 
@@ -5,7 +6,12 @@ import {  stringify } from 'yaml';
 async function main() {
     console.log("Démarrage du test du client MCP...");
     
-    const client = new MCPStdioClient('I:\\Node Projects\\mcp-ts-toolskit\\build\\index.js');
+    const client = new MCPStdioClient(
+        'I:\\Node Projects\\mcp-ts-toolskit\\build\\index.js',
+        {
+            MCP_TOOLSKIT_CONFIG_PATH: 'C:/tmp/config.json'
+        }
+    );
 
     try {
         // Attendre l'initialisation de la session
@@ -13,6 +19,7 @@ async function main() {
         await client.waitForSession();
         console.log("Session initialisée avec succès !");
 
+        /*
         // Test 1: Lister les répertoires autorisés
         console.log("\nTest 1: Liste des répertoires autorisés");
         const toolslist = await client.listTools();
@@ -34,7 +41,22 @@ async function main() {
         if (files.length > 0) {
             const contents = await client.readMultipleFiles(files.slice(0, 2));
             console.log('Files content:', contents);
-        }
+        }*/
+   
+        try {
+          
+            const adapter = new AnthropicToolAdapter(client, "");
+            const response = await adapter.chat("Peux tu charger le contenu de la page web 'https://www.trasis.com/en/', et de quoi cela parle ?");
+            if ('content' in response) {
+                console.log(response.content);
+            } else {
+                for await (const event of response) {
+                    console.log(event);
+                }
+            }
+        } catch (error) {
+            console.error('Error during tests:', error);
+        } 
 
     } catch (error) {
         console.error('Error during tests:', error);
