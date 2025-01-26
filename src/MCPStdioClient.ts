@@ -1,6 +1,14 @@
 import { spawn } from 'child_process';
 import type { MCPRequest, ClientInfo } from './types.js';
 
+export interface ILogger {
+    trace(message: string, ...args: any[]): void;
+    debug(message: string, ...args: any[]): void;
+    info(message: string, ...args: any[]): void;
+    warn(message: string, ...args: any[]): void;
+    error(message: string, error?: any, ...args: any[]): void;
+  }
+
 export class MCPStdioClient {
     private process: any;
     private messageQueue: Map<string, { 
@@ -12,11 +20,13 @@ export class MCPStdioClient {
         name: 'mcp-client',
         version: '1.0.0'
     };
+    private logger?: ILogger;
 
-    constructor(serverPath: string, env?: Record<string, string>) {
+    constructor(serverPath: string, env?: Record<string, string>, logger?:ILogger) {
+        this.logger = logger;
         this.messageQueue = new Map();
         
-        console.log('Starting MCP server:', serverPath);
+        this.logger?.debug('Starting MCP server:', serverPath);
 
         const processEnv = {
             ...process.env,
@@ -33,18 +43,18 @@ export class MCPStdioClient {
         // Gérer les messages du serveur avec une meilleure gestion des erreurs
         this.process.stdout.on('data', (data: Buffer) => {
             const response = data.toString();
-            console.log('Server response:', response);
+            this.logger?.debug('Server response:', response);
             
             try {
                 const messages = response.split('\n').filter(line => line.trim());
                 for (const message of messages) {
                     const parsedResponse = JSON.parse(message);
-                    console.log('Parsed response:', parsedResponse);
+                    this.logger?.debug('Parsed response:', parsedResponse);
                     this.handleMessage(parsedResponse);
                 }
             } catch (error) {
-                console.error('Error parsing server response:', error);
-                console.error('Raw response:', response);
+                this.logger?.error('Error parsing server response:', error);
+                this.logger?.error('Raw response:', response);
                 // Propager l'erreur aux promesses en attente
                 for (const [id, { reject }] of this.messageQueue) {
                     reject(error);
@@ -56,12 +66,12 @@ export class MCPStdioClient {
         // Amélioration de la gestion des erreurs
         this.process.stderr.on('data', (data: Buffer) => {
             const errorMessage = data.toString().trim();
-            console.error('Server error:', errorMessage);
+            this.logger?.error('Server error:', errorMessage);
         });
 
         // Gestion de la fermeture du processus
         this.process.on('close', (code: number) => {
-            console.log(`Server process exited with code ${code}`);
+            this.logger?.debug(`Server process exited with code ${code}`);
             // Rejeter toutes les promesses en attente
             for (const [id, { reject }] of this.messageQueue) {
                 reject(new Error(`Server process exited with code ${code}`));
@@ -71,12 +81,12 @@ export class MCPStdioClient {
 
         // Initialiser la session immédiatement
         this.initSession().catch(error => {
-            console.error("Failed to initialize session:", error);
+            this.logger?.error("Failed to initialize session:", error);
         });
     }
 
     private async initSession(): Promise<void> {
-        console.log("Initializing MCP session...");
+        this.logger?.debug("Initializing MCP session...");
         
         // Attendre que le process soit prêt
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -108,7 +118,7 @@ export class MCPStdioClient {
                     // Après l'initialisation réussie, on considère la session comme établie
                     if (value && value.protocolVersion) {
                         this.sessionId = initRequestId; // Utiliser l'ID de la requête comme ID de session
-                        console.log("Session initialized successfully");
+                        this.logger?.debug("Session initialized successfully");
                         resolve();
                     } else {
                         reject(new Error("Invalid initialization response"));
@@ -120,7 +130,7 @@ export class MCPStdioClient {
                 }
             });
 
-            console.log('Sending initialization request:', JSON.stringify(initRequest, null, 2));
+            this.logger?.debug('Sending initialization request:', JSON.stringify(initRequest, null, 2));
             this.process.stdin.write(JSON.stringify(initRequest) + '\n');
         });
     }
@@ -130,7 +140,7 @@ export class MCPStdioClient {
     }
 
     private handleMessage(message: any): void {
-        console.log("Handling message:", message);
+        this.logger?.debug("Handling message:", message);
         
         // Gérer les pings
         if (message.method === 'ping') {
@@ -139,7 +149,7 @@ export class MCPStdioClient {
                 method: 'pong',
                 id: message.id
             };
-            console.log('Sending pong response:', JSON.stringify(pongResponse));
+            this.logger?.debug('Sending pong response:', JSON.stringify(pongResponse));
             this.process.stdin.write(JSON.stringify(pongResponse) + '\n');
             return;
         }
@@ -187,7 +197,7 @@ export class MCPStdioClient {
             });
     
             try {
-                console.log('Sending tools list request:', JSON.stringify(request, null, 2));
+                this.logger?.debug('Sending tools list request:', JSON.stringify(request, null, 2));
                 this.process.stdin.write(JSON.stringify(request) + '\n');
             } catch (error) {
                 clearTimeout(timeoutId);
@@ -231,7 +241,7 @@ export class MCPStdioClient {
             });
 
             try {
-                console.log('Sending tool invocation request:', JSON.stringify(request, null, 2));
+                this.logger?.debug('Sending tool invocation request:', JSON.stringify(request, null, 2));
                 this.process.stdin.write(JSON.stringify(request) + '\n');
             } catch (error) {
                 clearTimeout(timeoutId);
@@ -262,7 +272,7 @@ export class MCPStdioClient {
 
     // Attendre que la session soit prête
     async waitForSession(timeout = 30000): Promise<void> {
-        console.log("Waiting for session to be ready...");
+        this.logger?.debug("Waiting for session to be ready...");
         const startTime = Date.now();
         while (!this.isSessionReady()) {
             if (Date.now() - startTime > timeout) {
@@ -270,7 +280,7 @@ export class MCPStdioClient {
             }
             await new Promise(resolve => setTimeout(resolve, 100));
         }
-        console.log("Session is ready!");
+        this.logger?.debug("Session is ready!");
     }
 
     // Fermer la connexion
