@@ -1,4 +1,4 @@
-import { spawn } from "child_process";
+import crossSpawn from 'cross-spawn';
 import fs from "fs/promises";
 
 export interface ILogger {
@@ -99,6 +99,7 @@ export class MCPStdioClient {
     version: "0.0.0",
   };
   private logger?: ILogger;
+  
   /**
    * Crée un client MCP avec la configuration spécifiée.
    * @param serverConfig - Configuration du serveur (commande, arguments et variables d'environnement)
@@ -110,11 +111,15 @@ export class MCPStdioClient {
 
     this.logger?.debug("Starting MCP server with:", serverConfig);
 
+    const env = {
+      ...process.env, ...(serverConfig.env || {})
+    };
+
     // Lancer le processus du serveur MCP
-    this.process = spawn(serverConfig.command, serverConfig.args, {
-      stdio: ["pipe", "pipe", "pipe"],
-      env: { ...process.env, ...(serverConfig.env || {}) },
-      windowsHide: true,
+    this.process = crossSpawn(serverConfig.command, serverConfig.args, {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: env,
+      windowsHide: true
     });
 
     // Gérer les messages du serveur avec une meilleure gestion des erreurs

@@ -39,7 +39,7 @@ async function main() {
     process.exit(1);
     }
 
-    const clients = await createMCPClientsFromConfig(configPath);
+    
 
    
 
@@ -75,8 +75,12 @@ async function main() {
         }*/
    
         try {
-          
-            const adapter = new AnthropicToolAdapter(clients);
+            const logger = new ConsoleLogger();
+            const clients = await createMCPClientsFromConfig(configPath,logger);
+            const adapter = new AnthropicToolAdapter(clients, logger);
+           // const tools = await adapter.getTools();
+          // console.log(stringify(tools));
+
             const response = await chat(
                 "Peux tu charger le contenu de la page web 'https://www.trasis.com/en/', et de quoi cela parle ?",
                 "",
