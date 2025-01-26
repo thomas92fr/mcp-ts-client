@@ -1,5 +1,4 @@
 import { spawn } from 'child_process';
-import type { MCPRequest, ClientInfo } from './types.js';
 
 export interface ILogger {
     trace(message: string, ...args: any[]): void;
@@ -8,6 +7,62 @@ export interface ILogger {
     warn(message: string, ...args: any[]): void;
     error(message: string, error?: any, ...args: any[]): void;
   }
+
+export  class ConsoleLogger implements ILogger {
+    trace(message: string, ...args: any[]): void {
+        console.trace(message, ...args);
+    }
+    debug(message: string, ...args: any[]): void {
+        console.debug(message, ...args);
+    }
+    info(message: string, ...args: any[]): void {
+        console.info(message, ...args);
+    }
+    warn(message: string, ...args: any[]): void {
+        console.warn(message, ...args);
+    }
+    error(message: string, error?: any, ...args: any[]): void {
+        console.error(message, error, ...args);
+    }
+}
+
+interface MCPMessage {
+    jsonrpc: '2.0';
+    id: string;
+}
+
+interface ClientInfo {
+    name: string;
+    version: string;
+}
+
+interface ServerInfo {
+    name: string;
+    version: string;
+}
+
+interface MCPRequest extends MCPMessage {
+    method: string;
+    params: {
+        name?: string;
+        version?: string;
+        protocolVersion?: string;
+        clientInfo?: ClientInfo;
+        capabilities?: {
+            tools?: Record<string, any>;
+        };
+        arguments?: any;
+        roots?: string[];
+    };
+}
+
+interface MCPResponse extends MCPMessage {
+    result?: any;
+    error?: {
+        code: number;
+        message: string;
+    };
+}
 
 export class MCPStdioClient {
     private process: any;
@@ -19,6 +74,10 @@ export class MCPStdioClient {
     private readonly clientInfo: ClientInfo = {
         name: 'mcp-client',
         version: '1.0.0'
+    };
+    private serverInfo: ServerInfo = {
+        name: 'Unknown',
+        version: '0.0.0'
     };
     private logger?: ILogger;
 
@@ -118,6 +177,12 @@ export class MCPStdioClient {
                     // Après l'initialisation réussie, on considère la session comme établie
                     if (value && value.protocolVersion) {
                         this.sessionId = initRequestId; // Utiliser l'ID de la requête comme ID de session
+
+                        if(value.serverInfo){
+                            this.serverInfo.name = value.serverInfo.name;
+                            this.serverInfo.version = value.serverInfo.version;
+                        }
+
                         this.logger?.debug("Session initialized successfully");
                         resolve();
                     } else {
@@ -294,5 +359,9 @@ export class MCPStdioClient {
     // Vérifier si le client est connecté
     isConnected(): boolean {
         return this.process !== null && !this.process.killed;
+    }
+
+    getServerName(): string {
+        return this.serverInfo.name;
     }
 }

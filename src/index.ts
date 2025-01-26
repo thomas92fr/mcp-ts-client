@@ -1,11 +1,13 @@
 import AnthropicToolAdapter from './AnthropicToolAdapter.js';
-import { MCPStdioClient } from './MCPStdioClient.js';
+import { ConsoleLogger, MCPStdioClient } from './MCPStdioClient.js';
 import {  stringify } from 'yaml';
 
 // Exemple d'utilisation
 async function main() {
     console.log("Démarrage du test du client MCP...");
     
+    
+
     const client = new MCPStdioClient(
         'I:\\Node Projects\\mcp-ts-toolskit\\build\\index.js',
         {
@@ -45,7 +47,7 @@ async function main() {
    
         try {
           
-            const adapter = new AnthropicToolAdapter(client, "");
+            const adapter = new AnthropicToolAdapter([client], "");
             const response = await adapter.chat("Peux tu charger le contenu de la page web 'https://www.trasis.com/en/', et de quoi cela parle ?");
             if ('content' in response) {
                 console.log(response.content);
